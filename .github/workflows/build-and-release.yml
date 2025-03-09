@@ -22,23 +22,12 @@ jobs:
             triple: x86_64-pc-windows-msvc
             container: ~
             setup: |
-              mkdir -p dist/include dist/lib
-            find_libs: |
-              Get-ChildItem -Path build -Filter "*.lib" -Recurse | ForEach-Object {
-                Copy-Item $_.FullName -Destination dist/lib/
-              }
+              mkdir -p dist
+            find_speech_libs: |
               Get-ChildItem -Path SpeechCore -Filter "*.lib" -Recurse | ForEach-Object {
                 Copy-Item $_.FullName -Destination dist/lib/
               }
-            find_headers: |
-              Get-ChildItem -Path . -Filter "*.h" -Recurse -Exclude "build/*","SpeechCore/*","dist/*" | ForEach-Object {
-                $relativePath = $_.FullName -replace [regex]::Escape("$PWD\"), ""
-                $targetDir = Split-Path -Path "dist/include/$relativePath" -Parent
-                if (!(Test-Path $targetDir)) {
-                  New-Item -ItemType Directory -Path $targetDir -Force
-                }
-                Copy-Item $_.FullName -Destination "dist/include/$relativePath"
-              }
+            find_speech_headers: |
               Get-ChildItem -Path SpeechCore/include -Filter "*.h" -Recurse | ForEach-Object {
                 $targetPath = "dist/include/" + $_.FullName.Replace("$PWD\SpeechCore\include\", "")
                 $targetDir = Split-Path -Path $targetPath -Parent
@@ -58,18 +47,12 @@ jobs:
             container: 
               image: ubuntu:latest
             setup: |
-              mkdir -p dist/include dist/lib
+              mkdir -p dist
               apt-get update
               apt-get install -y git cmake build-essential python3 python3-pip zip
-            find_libs: |
-              find build -name "*.a" -exec cp {} dist/lib/ \;
+            find_speech_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_headers: |
-              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
-                target_dir=$(dirname "dist/include/${header}")
-                mkdir -p "$target_dir"
-                cp "$header" "$target_dir/"
-              done
+            find_speech_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -87,17 +70,11 @@ jobs:
             container:
               image: alpine:latest
             setup: |
-              mkdir -p dist/include dist/lib
+              mkdir -p dist
               apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip
-            find_libs: |
-              find build -name "*.a" -exec cp {} dist/lib/ \;
+            find_speech_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_headers: |
-              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
-                target_dir=$(dirname "dist/include/${header}")
-                mkdir -p "$target_dir"
-                cp "$header" "$target_dir/"
-              done
+            find_speech_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -114,16 +91,10 @@ jobs:
             triple: x86_64-apple-darwin
             container: ~
             setup: |
-              mkdir -p dist/include dist/lib
-            find_libs: |
-              find build -name "*.a" -exec cp {} dist/lib/ \;
+              mkdir -p dist
+            find_speech_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_headers: |
-              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
-                target_dir=$(dirname "dist/include/${header}")
-                mkdir -p "$target_dir"
-                cp "$header" "$target_dir/"
-              done
+            find_speech_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -163,12 +134,17 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/dist"
       
       - name: Build with CMake
         run: |
           cd build
           cmake --build . --config Release
+      
+      - name: Install CMake Project
+        run: |
+          cd build
+          cmake --install .
       
       - name: Build SpeechCore with SCons
         run: |
@@ -178,17 +154,15 @@ jobs:
       - name: Create directory structure
         shell: bash
         run: |
-          if [ ! -d "dist/include" ] || [ ! -d "dist/lib" ]; then
-            mkdir -p dist/include dist/lib
-          fi
+          mkdir -p dist/include dist/lib
 
-      - name: Copy library files
+      - name: Copy SpeechCore library files
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-        run: ${{ matrix.target.find_libs }}
+        run: ${{ matrix.target.find_speech_libs }}
       
-      - name: Copy header files
+      - name: Copy SpeechCore header files
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-        run: ${{ matrix.target.find_headers }}
+        run: ${{ matrix.target.find_speech_headers }}
       
       - name: Create ZIP archive
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
