@@ -22,6 +22,7 @@ jobs:
             os: windows-latest
             triple: x86_64-pc-windows-msvc
             container: ~
+            shell: "powershell"
             setup: |
               mkdir -p dist/include dist/lib
             # Only copy SpeechCore libraries manually; the rest are installed via CMake
@@ -48,6 +49,7 @@ jobs:
             os: ubuntu-latest
             triple: x86_64-linux-gnu
             container: 
+            shell: "bash"
               image: ubuntu:latest
             setup: |
               mkdir -p dist/include dist/lib
@@ -162,11 +164,11 @@ jobs:
           fi
 
       - name: Copy SpeechCore Library Files
-        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_libs }}
       
       - name: Copy SpeechCore Header Files
-        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_headers }}
       
       - name: Generate Link Dependencies File
