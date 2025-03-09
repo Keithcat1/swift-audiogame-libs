@@ -1,5 +1,6 @@
-project(swift-audiogame-libs)
 cmake_minimum_required(VERSION 3.20)
+project(swift-audiogame-libs)
+
 
 
 
