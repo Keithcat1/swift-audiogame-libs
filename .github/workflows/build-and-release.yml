@@ -54,7 +54,7 @@ jobs:
             setup: |
               mkdir -p dist/include dist/lib
               sudo apt-get update
-              sudo apt-get install -y git cmake build-essential python3 python3-pip zip ninja-build
+              sudo apt-get install -y git cmake build-essential python3 python3-pip zip ninja-build libsdl3-dev
 
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
@@ -77,7 +77,7 @@ jobs:
             shell: "/bin/bash"
             image: alpine:latest
             setup: |
-              sudo apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build
+              sudo apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev
               mkdir -p dist/include dist/lib
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
