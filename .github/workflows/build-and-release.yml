@@ -51,12 +51,12 @@ jobs:
             triple: x86_64-linux-gnu
             container: 
             shell: "bash"
-              image: ubuntu:latest
+            image: ubuntu:latest
             setup: |
               mkdir -p dist/include dist/lib
               apt-get update
               apt-get install -y git cmake build-essential python3 python3-pip zip
-            done
+              done
 
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
@@ -179,11 +179,13 @@ jobs:
           fi
 
       - name: Copy SpeechCore Library Files
-        shell: ${{ matrix.target.shell }}
+        env:
+          shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_libs }}
       
       - name: Copy SpeechCore Header Files
-        shell: ${{ matrix.target.shell }}
+        env:
+          shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_headers }}
       
       - name: Generate Link Dependencies File
@@ -207,10 +209,11 @@ jobs:
           
           find .. -name "*.pc" -exec cat {} \; >> ../dist/link_dependencies.txt
       
+
       - name: Create ZIP Archive
-        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        env:
+          shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.zip_command }}
-      
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
