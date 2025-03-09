@@ -154,7 +154,7 @@ jobs:
       - name: Build SpeechCore with SCons
         run: |
           cd SpeechCore
-          scons build_mode=static
+          scons -q build_mode=static build_type=release
           
       - name: Create directory structure
         shell: bash
