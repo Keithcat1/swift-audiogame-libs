@@ -44,7 +44,7 @@ jobs:
               Compress-Archive -Path dist/include, dist/lib -DestinationPath "swift-audiogame-libs-$env:TARGET.zip"
             dependencies: |
               pip install scons
-          
+
           - name: Linux-GNU
             os: ubuntu-latest
             triple: x86_64-linux-gnu
