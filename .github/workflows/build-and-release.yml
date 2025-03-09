@@ -5,7 +5,6 @@ on:
     types: [created]
 
 jobs:
-  # Define build configuration matrix
   build:
     name: Build for ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.os }}
@@ -22,12 +21,14 @@ jobs:
             triple: x86_64-pc-windows-msvc
             container: ~
             setup: |
-              mkdir -p dist
-            find_speech_libs: |
+              mkdir -p dist/include dist/lib
+            # Only copy SpeechCore libraries manually; the rest are installed via CMake
+            find_libs: |
               Get-ChildItem -Path SpeechCore -Filter "*.lib" -Recurse | ForEach-Object {
                 Copy-Item $_.FullName -Destination dist/lib/
               }
-            find_speech_headers: |
+            # Only copy SpeechCore headers manually; the rest are installed via CMake
+            find_headers: |
               Get-ChildItem -Path SpeechCore/include -Filter "*.h" -Recurse | ForEach-Object {
                 $targetPath = "dist/include/" + $_.FullName.Replace("$PWD\SpeechCore\include\", "")
                 $targetDir = Split-Path -Path $targetPath -Parent
@@ -40,19 +41,19 @@ jobs:
               Compress-Archive -Path dist/include, dist/lib -DestinationPath "swift-audiogame-libs-$env:TARGET.zip"
             dependencies: |
               pip install scons
-            
+          
           - name: Linux-GNU
             os: ubuntu-latest
             triple: x86_64-linux-gnu
             container: 
               image: ubuntu:latest
             setup: |
-              mkdir -p dist
+              mkdir -p dist/include dist/lib
               apt-get update
               apt-get install -y git cmake build-essential python3 python3-pip zip
-            find_speech_libs: |
+            find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_speech_headers: |
+            find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -63,18 +64,18 @@ jobs:
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
               pip3 install scons
-            
+          
           - name: Linux-Musl
             os: ubuntu-latest
             triple: x86_64-linux-musl
             container:
               image: alpine:latest
             setup: |
-              mkdir -p dist
+              mkdir -p dist/include dist/lib
               apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip
-            find_speech_libs: |
+            find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_speech_headers: |
+            find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -85,16 +86,16 @@ jobs:
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
               pip3 install scons
-            
+          
           - name: macOS
             os: macos-latest
             triple: x86_64-apple-darwin
             container: ~
             setup: |
-              mkdir -p dist
-            find_speech_libs: |
+              mkdir -p dist/include dist/lib
+            find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_speech_headers: |
+            find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
@@ -134,14 +135,14 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/dist"
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=../dist
       
       - name: Build with CMake
         run: |
           cd build
           cmake --build . --config Release
       
-      - name: Install CMake Project
+      - name: Install with CMake
         run: |
           cd build
           cmake --install .
@@ -154,17 +155,40 @@ jobs:
       - name: Create directory structure
         shell: bash
         run: |
-          mkdir -p dist/include dist/lib
+          if [ ! -d "dist/include" ] || [ ! -d "dist/lib" ]; then
+            mkdir -p dist/include dist/lib
+          fi
 
-      - name: Copy SpeechCore library files
+      - name: Copy SpeechCore Library Files
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-        run: ${{ matrix.target.find_speech_libs }}
+        run: ${{ matrix.target.find_libs }}
       
-      - name: Copy SpeechCore header files
+      - name: Copy SpeechCore Header Files
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-        run: ${{ matrix.target.find_speech_headers }}
+        run: ${{ matrix.target.find_headers }}
       
-      - name: Create ZIP archive
+      - name: Generate Link Dependencies File
+        shell: bash
+        run: |
+          cd build
+          echo "# CMake generated link dependencies for Swift build plugin" > ../dist/link_dependencies.txt
+          
+          targets=$(cmake --build . --target help | grep -o '^.*:' | sed 's/://g' | grep -v 'help\|all\|clean')
+          
+          for target in $targets; do
+            if [ -f "CMakeFiles/$target.dir/link.txt" ]; then
+              echo "# Target: $target" >> ../dist/link_dependencies.txt
+              grep -o -- "-l[^ ]*" "CMakeFiles/$target.dir/link.txt" | sort | uniq >> ../dist/link_dependencies.txt
+              echo "" >> ../dist/link_dependencies.txt
+            fi
+          done
+          
+          echo "# SpeechCore dependencies" >> ../dist/link_dependencies.txt
+          echo "SpeechCore requires linking against: TBD (captured from SCons if available)" >> ../dist/link_dependencies.txt
+          
+          find .. -name "*.pc" -exec cat {} \; >> ../dist/link_dependencies.txt
+      
+      - name: Create ZIP Archive
         shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
         run: ${{ matrix.target.zip_command }}
       
