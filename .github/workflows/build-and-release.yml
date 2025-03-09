@@ -1,0 +1,205 @@
+name: Build and Release Libraries
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  # Define build configuration matrix
+  build:
+    name: Build for ${{ matrix.target.name }}
+    runs-on: ${{ matrix.target.os }}
+    container: ${{ matrix.target.container }}
+    env:
+      TARGET: ${{ matrix.target.triple }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: Windows
+            os: windows-latest
+            triple: x86_64-pc-windows-msvc
+            container: ~
+            setup: |
+              mkdir -p dist/include dist/lib
+            find_libs: |
+              Get-ChildItem -Path build -Filter "*.lib" -Recurse | ForEach-Object {
+                Copy-Item $_.FullName -Destination dist/lib/
+              }
+              Get-ChildItem -Path SpeechCore -Filter "*.lib" -Recurse | ForEach-Object {
+                Copy-Item $_.FullName -Destination dist/lib/
+              }
+            find_headers: |
+              Get-ChildItem -Path . -Filter "*.h" -Recurse -Exclude "build/*","SpeechCore/*","dist/*" | ForEach-Object {
+                $relativePath = $_.FullName -replace [regex]::Escape("$PWD\"), ""
+                $targetDir = Split-Path -Path "dist/include/$relativePath" -Parent
+                if (!(Test-Path $targetDir)) {
+                  New-Item -ItemType Directory -Path $targetDir -Force
+                }
+                Copy-Item $_.FullName -Destination "dist/include/$relativePath"
+              }
+              Get-ChildItem -Path SpeechCore/include -Filter "*.h" -Recurse | ForEach-Object {
+                $targetPath = "dist/include/" + $_.FullName.Replace("$PWD\SpeechCore\include\", "")
+                $targetDir = Split-Path -Path $targetPath -Parent
+                if (!(Test-Path $targetDir)) {
+                  New-Item -ItemType Directory -Path $targetDir -Force
+                }
+                Copy-Item $_.FullName -Destination $targetPath
+              }
+            zip_command: |
+              Compress-Archive -Path dist/include, dist/lib -DestinationPath "swift-audiogame-libs-$env:TARGET.zip"
+            dependencies: |
+              pip install scons
+            
+          - name: Linux-GNU
+            os: ubuntu-latest
+            triple: x86_64-linux-gnu
+            container: 
+              image: ubuntu:latest
+            setup: |
+              mkdir -p dist/include dist/lib
+              apt-get update
+              apt-get install -y git cmake build-essential python3 python3-pip zip
+            find_libs: |
+              find build -name "*.a" -exec cp {} dist/lib/ \;
+              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
+            find_headers: |
+              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
+                target_dir=$(dirname "dist/include/${header}")
+                mkdir -p "$target_dir"
+                cp "$header" "$target_dir/"
+              done
+              find SpeechCore/include -name "*.h" | while read header; do
+                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
+                target_dir=$(dirname "dist/include/${relpath}")
+                mkdir -p "$target_dir"
+                cp "$header" "dist/include/${relpath}"
+              done
+            zip_command: |
+              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
+            dependencies: |
+              pip3 install scons
+            
+          - name: Linux-Musl
+            os: ubuntu-latest
+            triple: x86_64-linux-musl
+            container:
+              image: alpine:latest
+            setup: |
+              mkdir -p dist/include dist/lib
+              apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip
+            find_libs: |
+              find build -name "*.a" -exec cp {} dist/lib/ \;
+              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
+            find_headers: |
+              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
+                target_dir=$(dirname "dist/include/${header}")
+                mkdir -p "$target_dir"
+                cp "$header" "$target_dir/"
+              done
+              find SpeechCore/include -name "*.h" | while read header; do
+                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
+                target_dir=$(dirname "dist/include/${relpath}")
+                mkdir -p "$target_dir"
+                cp "$header" "dist/include/${relpath}"
+              done
+            zip_command: |
+              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
+            dependencies: |
+              pip3 install scons
+            
+          - name: macOS
+            os: macos-latest
+            triple: x86_64-apple-darwin
+            container: ~
+            setup: |
+              mkdir -p dist/include dist/lib
+            find_libs: |
+              find build -name "*.a" -exec cp {} dist/lib/ \;
+              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
+            find_headers: |
+              find . -name "*.h" -not -path "./build/*" -not -path "./SpeechCore/*" -not -path "./dist/*" | while read header; do
+                target_dir=$(dirname "dist/include/${header}")
+                mkdir -p "$target_dir"
+                cp "$header" "$target_dir/"
+              done
+              find SpeechCore/include -name "*.h" | while read header; do
+                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
+                target_dir=$(dirname "dist/include/${relpath}")
+                mkdir -p "$target_dir"
+                cp "$header" "dist/include/${relpath}"
+              done
+            zip_command: |
+              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
+            dependencies: |
+              pip install scons
+
+    steps:
+      - name: Setup Environment
+        shell: bash
+        run: ${{ matrix.target.setup }}
+        if: matrix.target.setup != ''
+      
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+        if: matrix.target.name == 'Windows' || matrix.target.name == 'macOS'
+      
+      - name: Install Dependencies
+        shell: bash
+        run: ${{ matrix.target.dependencies }}
+      
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        if: matrix.target.name == 'Windows' || matrix.target.name == 'macOS'
+      
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+      
+      - name: Build with CMake
+        run: |
+          cd build
+          cmake --build . --config Release
+      
+      - name: Build SpeechCore with SCons
+        run: |
+          cd SpeechCore
+          scons build_mode=static
+          
+      - name: Create directory structure
+        shell: bash
+        run: |
+          if [ ! -d "dist/include" ] || [ ! -d "dist/lib" ]; then
+            mkdir -p dist/include dist/lib
+          fi
+
+      - name: Copy library files
+        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        run: ${{ matrix.target.find_libs }}
+      
+      - name: Copy header files
+        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        run: ${{ matrix.target.find_headers }}
+      
+      - name: Create ZIP archive
+        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        run: ${{ matrix.target.zip_command }}
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./swift-audiogame-libs-${{ env.TARGET }}.zip
+          asset_name: swift-audiogame-libs-${{ env.TARGET }}.zip
+          asset_content_type: application/zip
