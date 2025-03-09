@@ -74,6 +74,7 @@ jobs:
             os: ubuntu-latest
             triple: x86_64-linux-musl
             container:
+            shell: "/bin/bash"
               image: alpine:latest
             setup: |
               sudo apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build
