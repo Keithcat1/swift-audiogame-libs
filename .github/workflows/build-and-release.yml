@@ -75,7 +75,7 @@ jobs:
             triple: x86_64-linux-musl
             container:
             shell: "/bin/bash"
-              image: alpine:latest
+            image: alpine:latest
             setup: |
               sudo apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build
               mkdir -p dist/include dist/lib
@@ -187,19 +187,10 @@ jobs:
               grep -o -- "-l[^ ]*" "CMakeFiles/$target.dir/link.txt" | sort | uniq >> ../dist/link_dependencies.txt
               echo "" >> ../dist/link_dependencies.txt
             fi
-          done
-          
-          echo "# SpeechCore dependencies" >> ../dist/link_dependencies.txt
-          echo "SpeechCore requires linking against: TBD (captured from SCons if available)" >> ../dist/link_dependencies.txt
-          
-          find .. -name "*.pc" -exec cat {} \; >> ../dist/link_dependencies.txt
-      
-
-      - name: Create ZIP Archive
-        env:
-          shell: ${{ matrix.target.shell }}
-        run: ${{ matrix.target.zip_command }}
+        
+      # Conditional step to upload to release if triggered by a release event
       - name: Upload Release Asset
+        if: github.event_name == 'release'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -208,3 +199,11 @@ jobs:
           asset_path: ./swift-audiogame-libs-${{ env.TARGET }}.zip
           asset_name: swift-audiogame-libs-${{ env.TARGET }}.zip
           asset_content_type: application/zip
+      
+      # Conditional step to upload artifact for manual inspection if not triggered by a release event
+      - name: Upload Artifact
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: swift-audiogame-libs-${{ env.TARGET }}
+          path: ./swift-audiogame-libs-${{ env.TARGET }}.zip
