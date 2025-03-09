@@ -53,7 +53,7 @@ jobs:
             image: ubuntu:latest
             setup: |
               mkdir -p dist/include dist/lib
-              apt-get update
+              sudo apt-get update
               sudo apt-get install -y git cmake build-essential python3 python3-pip zip
 
             find_libs: |
