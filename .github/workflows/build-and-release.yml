@@ -44,7 +44,6 @@ jobs:
               Compress-Archive -Path dist/include, dist/lib -DestinationPath "swift-audiogame-libs-$env:TARGET.zip"
             dependencies: |
               pip install scons
-              done
 
           - name: Linux-GNU
             os: ubuntu-latest
@@ -55,12 +54,10 @@ jobs:
             setup: |
               mkdir -p dist/include dist/lib
               apt-get update
-              apt-get install -y git cmake build-essential python3 python3-pip zip
-              done
+              sudo apt-get install -y git cmake build-essential python3 python3-pip zip
 
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-              done
 
             find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
@@ -68,13 +65,10 @@ jobs:
                 target_dir=$(dirname "dist/include/${relpath}")
                 mkdir -p "$target_dir"
                 cp "$header" "dist/include/${relpath}"
-              done
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
-              done
             dependencies: |
               pip3 install scons
-              done
           
           - name: Linux-Musl
             os: ubuntu-latest
@@ -83,24 +77,19 @@ jobs:
               image: alpine:latest
             setup: |
               mkdir -p dist/include dist/lib
-              apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip
-              done
+              sudo apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-              done
             find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
                 mkdir -p "$target_dir"
                 cp "$header" "dist/include/${relpath}"
-              done
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
-              done
             dependencies: |
               pip3 install scons
-              done
           
           - name: macOS
             os: macos-latest
@@ -108,23 +97,18 @@ jobs:
             container: ~
             setup: |
               mkdir -p dist/include dist/lib
-              done
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-              done
             find_headers: |
               find SpeechCore/include -name "*.h" | while read header; do
                 relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
                 target_dir=$(dirname "dist/include/${relpath}")
                 mkdir -p "$target_dir"
                 cp "$header" "dist/include/${relpath}"
-              done
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
-              done
             dependencies: |
               pip install scons
-              done
 
     steps:
       - name: Setup Environment
