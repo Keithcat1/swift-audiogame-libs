@@ -190,7 +190,17 @@ jobs:
         env:
           shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_headers }}
-      
+
+      - name: Create ZIP
+        env:
+          shell: ${{ matrix.target.shell }}
+        run: |
+          ${{ matrix.target.zip_command }}
+
+
+
+
+
       # Conditional step to upload to release if triggered by a release event
       - name: Upload Release Asset
         if: github.event_name == 'release'
@@ -205,7 +215,7 @@ jobs:
       
       # Conditional step to upload artifact for manual inspection if not triggered by a release event
       - name: Upload Artifact
-        if: github.event_name != 'release'
+        if: github.event_name != 'release'  
         uses: actions/upload-artifact@v4
         with:
           name: swift-audiogame-libs-${{ env.TARGET }}
