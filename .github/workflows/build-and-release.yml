@@ -78,7 +78,7 @@ jobs:
             arch: x86_64
             triple: x86_64-linux-musl
             container:
-            shell: "/bin/bash"
+            shell: 
             image: alpine:latest
             setup: |
               apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev speech-dispatcher speech-dispatcher-dev
