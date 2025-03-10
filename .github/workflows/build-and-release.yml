@@ -81,7 +81,7 @@ jobs:
             shell: "/bin/bash"
             image: alpine:latest
             setup: |
-              apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev
+              apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev speech-dispatcher speech-dispatcher-dev
               mkdir -p dist/include dist/lib
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
