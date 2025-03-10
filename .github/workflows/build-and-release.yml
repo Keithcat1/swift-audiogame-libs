@@ -20,6 +20,7 @@ jobs:
         target:
           - name: Windows
             os: windows-latest
+            arch: x86_64
             triple: x86_64-pc-windows-msvc
             container: ~
             shell: "powershell"
@@ -47,6 +48,7 @@ jobs:
 
           - name: Linux-GNU
             os: ubuntu-latest
+            arch: x86_64
             triple: x86_64-linux-gnu
             container: 
             shell: "bash"
@@ -72,6 +74,7 @@ jobs:
           
           - name: Linux-Musl
             os: ubuntu-latest
+            arch: x86_64
             triple: x86_64-linux-musl
             container:
             shell: "/bin/bash"
@@ -94,6 +97,7 @@ jobs:
           
           - name: macOS
             os: macos-latest
+            arch: x86_64
             triple: x86_64-apple-darwin
             container: ~
             setup: |
@@ -126,7 +130,20 @@ jobs:
         with:
           python-version: '3.x'
         if: matrix.target.name == 'Windows' || matrix.target.name == 'macOS'
-      
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      # macOS-specific setup: Install Xcode Command Line Tools and SCons
+      - name: Install Xcode Command Line Tools (macOS)
+        if: matrix.target.os == 'macos-latest'
+        run: |
+          sudo xcode-select --install || echo "Xcode Command Line Tools already installed"
+
+
       - name: Install Dependencies
         shell: bash
         run: ${{ matrix.target.dependencies }}
