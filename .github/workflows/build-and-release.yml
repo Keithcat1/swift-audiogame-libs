@@ -56,7 +56,8 @@ jobs:
             setup: |
               mkdir -p dist/include dist/lib
               sudo apt-get update
-              sudo apt-get install -y git cmake build-essential python3 python3-pip zip ninja-build libsdl3-dev
+              # SDL dependencies
+              sudo apt-get install -y git cmake build-essential python3 python3-pip zip ninja-build   libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libwayland-dev
 
             find_libs: |
               find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
@@ -70,7 +71,7 @@ jobs:
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
-              pip3 install scons
+              sudo pip3 install scons
           
           - name: Linux-Musl
             os: ubuntu-latest
@@ -93,7 +94,7 @@ jobs:
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
-              pip3 install scons
+              sudo pip3 install scons
           
           - name: macOS
             os: macos-latest
@@ -113,7 +114,7 @@ jobs:
             zip_command: |
               cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
-              pip install scons
+              brew install scons
 
     steps:
       - name: Setup Environment
@@ -190,21 +191,6 @@ jobs:
           shell: ${{ matrix.target.shell }}
         run: ${{ matrix.target.find_headers }}
       
-      - name: Generate Link Dependencies File
-        shell: bash
-        run: |
-          cd build
-          echo "# CMake generated link dependencies for Swift build plugin" > ../dist/link_dependencies.txt
-          
-          targets=$(cmake --build . --target help | grep -o '^.*:' | sed 's/://g' | grep -v 'help\|all\|clean')
-          
-          for target in $targets; do
-            if [ -f "CMakeFiles/$target.dir/link.txt" ]; then
-              echo "# Target: $target" >> ../dist/link_dependencies.txt
-              grep -o -- "-l[^ ]*" "CMakeFiles/$target.dir/link.txt" | sort | uniq >> ../dist/link_dependencies.txt
-              echo "" >> ../dist/link_dependencies.txt
-            fi
-        
       # Conditional step to upload to release if triggered by a release event
       - name: Upload Release Asset
         if: github.event_name == 'release'
