@@ -172,7 +172,7 @@ jobs:
       - name: Build SpeechCore with SCons
         run: |
           cd SpeechCore
-          scons -Q build_mode=static build_type=release arch=${{ matrix.target.arch }}
+          scons -Q build_mode=static build_type=release arch=${{ matrix.target.arch }} with_java=false
           
       - name: Create directory structure
         shell: bash
