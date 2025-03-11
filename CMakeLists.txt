@@ -10,7 +10,6 @@ function(get_all_system_libraries OUTPUT_FILE)
   # Process each target in the list
   foreach(TARGET_NAME ${ARGN})
     # Skip if not a valid target
-    message(STATUS "Target: ${TARGET_NAME}")
     if(NOT TARGET ${TARGET_NAME})
       message(STATUS "Skipping non-target: ${TARGET_NAME}")
       continue()
@@ -27,7 +26,6 @@ function(get_all_system_libraries OUTPUT_FILE)
   set(CLEAN_SYSTEM_LIBRARIES "")
   foreach(lib ${ALL_LIBRARIES})
     # Skip CMake targets (which are not system libraries)
-    message(STATUS "Maybe: ${lib}")
     if(TARGET ${lib})
       continue()
     endif()
@@ -138,6 +136,8 @@ endfunction()
 
 include(FetchContent)
 
+option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+
 FetchContent_Declare(
   sdl
   GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -178,14 +178,20 @@ FetchContent_Declare(
     opus
     GIT_REPOSITORY https://github.com/xiph/opus.git
     GIT_TAG v1.5.2
+    OVERRIDE_FIND_PACKAGE   
 )
 FetchContent_MakeAvailable(opus)
 
 
+set(OP_DISABLE_HTTP TRUE)
+                    set(OP_DISABLE_DOCS TRUE)
+                    set(OP_DISABLE_EXAMPLES TRUE)
+
 FetchContent_Declare(
     opusfile
     GIT_REPOSITORY https://github.com/xiph/opusfile.git
-    GIT_TAG v0.12
+    # only the master branch of opusfile has CMakeSupport
+
 )
 FetchContent_MakeAvailable(opusfile)
 
