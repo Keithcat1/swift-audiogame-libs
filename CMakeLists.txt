@@ -1,6 +1,27 @@
 cmake_minimum_required(VERSION 3.20)
 project(swift-audiogame-libs)
 
+function(write_link_libraries output_file)
+    file(WRITE "${output_file}" "") # Clear the file first
+    foreach(target IN LISTS ARGN)
+        if (TARGET ${target})
+            get_target_property(libs ${target} INTERFACE_LINK_LIBRARIES)
+            get_target_property(priv_libs ${target} LINK_LIBRARIES)
+            if (libs)
+                foreach(lib IN LISTS libs)
+                    file(APPEND "${output_file}" "${lib}\n")
+                endforeach()
+            endif()
+            if (priv_libs)
+                foreach(lib IN LISTS priv_libs)
+                    file(APPEND "${output_file}" "${lib}\n")
+                endforeach()
+            endif()
+        else()
+            message(WARNING "Target '${target}' does not exist!")
+        endif()
+    endforeach()
+endfunction()
 
 
 
