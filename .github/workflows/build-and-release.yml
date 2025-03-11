@@ -47,11 +47,11 @@ jobs:
               sudo pip3 install scons
           
           - name: Linux-Musl
+          os: ubuntu-latest
             arch: x86_64
             triple: x86_64-linux-musl
             container:
               image: alpine:latest
-            shell: 
             setup: |
               apk update
               apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev speech-dispatcher speech-dispatcher-dev
