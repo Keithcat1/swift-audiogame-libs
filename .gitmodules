@@ -1,4 +1,0 @@
-[submodule "SpeechCore"]
-	path = SpeechCore
-	url = https://github.com/still-standing88/speechcore
-	branch = v1.0.0

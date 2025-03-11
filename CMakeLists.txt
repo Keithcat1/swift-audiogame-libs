@@ -28,6 +28,7 @@ endfunction()
 
 
 include(FetchContent)
+
 FetchContent_Declare(
   sdl
   GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -35,4 +36,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(sdl)
 
+
+FetchContent_Declare(
+  speech_core
+  GIT_REPOSITORY https://github.com/keithcat1/SpeechCore.git
+  GIT_TAG v1.1.0
+)
+FetchContent_MakeAvailable(speech_core)
 

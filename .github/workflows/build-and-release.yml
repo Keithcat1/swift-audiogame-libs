@@ -26,23 +26,6 @@ jobs:
             shell: "powershell"
             setup: |
               mkdir -p dist/include dist/lib
-            # Only copy SpeechCore libraries manually; the rest are installed via CMake
-            find_libs: |
-              Get-ChildItem -Path SpeechCore -Filter "*.lib" -Recurse | ForEach-Object {
-                Copy-Item $_.FullName -Destination dist/lib/
-              }
-            # Only copy SpeechCore headers manually; the rest are installed via CMake
-            find_headers: |
-              Get-ChildItem -Path SpeechCore/include -Filter "*.h" -Recurse | ForEach-Object {
-                $targetPath = "dist/include/" + $_.FullName.Replace("$PWD\SpeechCore\include\", "")
-                $targetDir = Split-Path -Path $targetPath -Parent
-                if (!(Test-Path $targetDir)) {
-                  New-Item -ItemType Directory -Path $targetDir -Force
-                }
-                Copy-Item $_.FullName -Destination $targetPath
-              }
-            zip_command: |
-              Compress-Archive -Path dist/include, dist/lib -DestinationPath "swift-audiogame-libs-$env:TARGET.zip"
             dependencies: |
               pip install scons
 
@@ -59,17 +42,7 @@ jobs:
               # SDL dependencies
               sudo apt-get install -y git cmake build-essential python3 python3-pip zip ninja-build   libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libwayland-dev speech-dispatcher libspeechd-dev
 
-            find_libs: |
-              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
 
-            find_headers: |
-              find SpeechCore/include -name "*.h" | while read header; do
-                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
-                target_dir=$(dirname "dist/include/${relpath}")
-                mkdir -p "$target_dir"
-                cp "$header" "dist/include/${relpath}"
-            zip_command: |
-              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
               sudo pip3 install scons
           
@@ -78,21 +51,12 @@ jobs:
             arch: x86_64
             triple: x86_64-linux-musl
             container:
+              image: alpine:latest
             shell: 
-            image: alpine:latest
             setup: |
+              apk update
               apk add --no-cache git cmake make gcc g++ musl-dev python3 py3-pip zip ninja-build sdl3-dev speech-dispatcher speech-dispatcher-dev
               mkdir -p dist/include dist/lib
-            find_libs: |
-              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_headers: |
-              find SpeechCore/include -name "*.h" | while read header; do
-                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
-                target_dir=$(dirname "dist/include/${relpath}")
-                mkdir -p "$target_dir"
-                cp "$header" "dist/include/${relpath}"
-            zip_command: |
-              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
               sudo pip3 install scons
           
@@ -103,16 +67,6 @@ jobs:
             container: ~
             setup: |
               mkdir -p dist/include dist/lib
-            find_libs: |
-              find SpeechCore -name "*.a" -exec cp {} dist/lib/ \;
-            find_headers: |
-              find SpeechCore/include -name "*.h" | while read header; do
-                relpath=$(echo "$header" | sed 's|SpeechCore/include/||')
-                target_dir=$(dirname "dist/include/${relpath}")
-                mkdir -p "$target_dir"
-                cp "$header" "dist/include/${relpath}"
-            zip_command: |
-              cd dist && zip -r ../swift-audiogame-libs-$TARGET.zip include lib
             dependencies: |
               brew install scons
 
@@ -168,38 +122,16 @@ jobs:
         run: |
           cd build
           cmake --install .
-      
-      - name: Build SpeechCore with SCons
-        run: |
-          cd SpeechCore
-          scons -Q build_mode=static build_type=release arch=${{ matrix.target.arch }} with_java=false
           
-      - name: Create directory structure
-        shell: bash
-        run: |
-          if [ ! -d "dist/include" ] || [ ! -d "dist/lib" ]; then
-            mkdir -p dist/include dist/lib
-          fi
 
-      - name: Copy SpeechCore Library Files
-        env:
-          shell: ${{ matrix.target.shell }}
-        run: ${{ matrix.target.find_libs }}
+
+
+      - name: Zip Files
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: dist/ link_targets.txt
+          dest: swift-audiogame-libs-${{ matrix.target.triple }}.zip
       
-      - name: Copy SpeechCore Header Files
-        env:
-          shell: ${{ matrix.target.shell }}
-        run: ${{ matrix.target.find_headers }}
-
-      - name: Create ZIP
-        env:
-          shell: ${{ matrix.target.shell }}
-        run: |
-          ${{ matrix.target.zip_command }}
-
-
-
-
 
       # Conditional step to upload to release if triggered by a release event
       - name: Upload Release Asset
