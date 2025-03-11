@@ -44,3 +44,4 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(speech_core)
 
+write_link_libraries("../link_targets.txt" SpeechCore sdl3-static)
