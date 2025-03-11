@@ -85,12 +85,6 @@ jobs:
           python-version: '3.x'
         if: matrix.target.name == 'Windows' || matrix.target.name == 'macOS'
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'zulu'
-
       # macOS-specific setup: Install Xcode Command Line Tools and SCons
       - name: Install Xcode Command Line Tools (macOS)
         if: matrix.target.os == 'macos-latest'
@@ -105,8 +99,11 @@ jobs:
       - name: Install CMake
         uses: lukka/get-cmake@latest
         if: matrix.target.name == 'Windows' || matrix.target.name == 'macOS'
-      
+
+
       - name: Configure CMake
+        - uses: ilammy/msvc-dev-cmd@v1
+
         run: |
           mkdir build
           cd build
