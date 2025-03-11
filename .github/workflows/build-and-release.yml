@@ -47,7 +47,6 @@ jobs:
               sudo pip3 install scons
           
           - name: Linux-Musl
-            os: ubuntu-latest
             arch: x86_64
             triple: x86_64-linux-musl
             container:
