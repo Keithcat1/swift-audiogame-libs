@@ -40,7 +40,7 @@ FetchContent_MakeAvailable(sdl)
 FetchContent_Declare(
   speech_core
   GIT_REPOSITORY https://github.com/keithcat1/SpeechCore.git
-  GIT_TAG v1.1.0
+  GIT_TAG v1.1.1
 )
 FetchContent_MakeAvailable(speech_core)
 
