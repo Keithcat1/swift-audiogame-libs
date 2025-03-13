@@ -11,6 +11,8 @@ jobs:
     name: Build for ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.os }}
     container: ${{ matrix.target.container }}
+    permissions:
+      contents: write
     env:
       TARGET: ${{ matrix.target.triple }}
     
